@@ -36,6 +36,9 @@ public class SimpleAutoRestart extends JavaPlugin {
     private final Map<Long, String> titles = new HashMap<>();
     private final Map<Long, String> subtitles = new HashMap<>();
     private List<String> commands = new ArrayList<>();
+    private boolean delayRestartEnabled = false;
+    private long delayRestartDelay = 30;
+    private List<String> runFirstCommands = new ArrayList<>();
 
     /**
      * Function executed when the plugin is enabling.
@@ -83,7 +86,8 @@ public class SimpleAutoRestart extends JavaPlugin {
         // Schedule the restarts
         for (String restartTime : this.restartTimes) {
             try {
-                restartScheduler.scheduleRestart(restartTime, messages, titles, subtitles, commands);
+                restartScheduler.scheduleRestart(restartTime, messages, titles, subtitles, commands,
+                        delayRestartEnabled, delayRestartDelay, runFirstCommands);
             } catch (Exception e) {
                 getLogger().log(Level.SEVERE, "Failed to schedule the restart for: {0}. Due to{1}", new Object[]{restartTime, e.getMessage()});
             }
@@ -187,6 +191,27 @@ public class SimpleAutoRestart extends JavaPlugin {
             reloadConfig();
             this.commands = config.getStringList("commands");
         }
+        // Load the delayed restart settings
+        this.delayRestartEnabled = config.getBoolean("delayRestart.enabled", false);
+        this.delayRestartDelay = Math.max(0, config.getLong("delayRestart.delay", 30));
+        this.runFirstCommands = config.getStringList("delayRestart.runFirst");
+
+        // Add the default delayed restart section if it is missing (older configs)
+        if (config.get("delayRestart") == null) {
+            Map<String, Object> delayRestart = new HashMap<>();
+            delayRestart.put("enabled", false);
+            delayRestart.put("delay", 30);
+            List<String> defaultRunFirst = new ArrayList<>();
+            defaultRunFirst.add("save-all");
+            delayRestart.put("runFirst", defaultRunFirst);
+            config.set("delayRestart", delayRestart);
+            saveConfig();
+            reloadConfig();
+            this.delayRestartEnabled = config.getBoolean("delayRestart.enabled", false);
+            this.delayRestartDelay = Math.max(0, config.getLong("delayRestart.delay", 30));
+            this.runFirstCommands = config.getStringList("delayRestart.runFirst");
+        }
+
         return config;
     }
 
@@ -212,6 +237,18 @@ public class SimpleAutoRestart extends JavaPlugin {
 
     public List<String> getCommands() {
         return commands;
+    }
+
+    public boolean isDelayRestartEnabled() {
+        return delayRestartEnabled;
+    }
+
+    public long getDelayRestartDelay() {
+        return delayRestartDelay;
+    }
+
+    public List<String> getRunFirstCommands() {
+        return runFirstCommands;
     }
 
     private static boolean isFolia() {

@@ -286,7 +286,8 @@ public class CommandMain implements TabExecutor {
         }
 
         boolean success = restartScheduler.scheduleRestart(_restartTime, plugin.getMessages(), plugin.getTitles(),
-                plugin.getSubtitles(), plugin.getCommands());
+                plugin.getSubtitles(), plugin.getCommands(), plugin.isDelayRestartEnabled(),
+                plugin.getDelayRestartDelay(), plugin.getRunFirstCommands());
 
         if (!success) {
             throw new IllegalArgumentException("<red>Invalid time format!");

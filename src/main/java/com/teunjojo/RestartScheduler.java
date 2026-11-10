@@ -32,6 +32,12 @@ public class RestartScheduler {
 
     public boolean scheduleRestart(String _restartTime, Map<Long, String> _messages, Map<Long, String> _titles,
             Map<Long, String> _subtitles, List<String> _commands) {
+        return scheduleRestart(_restartTime, _messages, _titles, _subtitles, _commands, false, 0, List.of());
+    }
+
+    public boolean scheduleRestart(String _restartTime, Map<Long, String> _messages, Map<Long, String> _titles,
+            Map<Long, String> _subtitles, List<String> _commands, boolean _delayEnabled, long _delaySeconds,
+            List<String> _runFirstCommands) {
 
         ZonedDateTime nextRestart = parseRestartTime(_restartTime);
         ZonedDateTime now = ZonedDateTime.now();
@@ -109,13 +115,43 @@ public class RestartScheduler {
             @Override
             public void run() {
                 if (getNextRestart() == nextRestart && !isRestartCanceled(nextRestart)) {
-                    _commands.forEach(command -> {
-                        Runnable task = () -> {
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                        };
+                    Runnable executeRestartCommands = () -> {
+                        _commands.forEach(command -> {
+                            Runnable task = () -> {
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                            };
 
-                        plugin.runTask(task);
-                    });
+                            plugin.runTask(task);
+                        });
+                    };
+
+                    if (_delayEnabled) {
+                        plugin.getLogger().log(Level.INFO,
+                                "Restart time reached - running pre-restart commands, restarting in {0} seconds.",
+                                _delaySeconds);
+
+                        // Run the pre-restart commands (e.g. save data, move players to lobby)
+                        _runFirstCommands.forEach(command -> {
+                            Runnable task = () -> {
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                            };
+
+                            plugin.runTask(task);
+                        });
+
+                        // Defer the actual restart commands by the configured delay
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                if (!isRestartCanceled(nextRestart)) {
+                                    plugin.getLogger().log(Level.INFO, "Executing the restart commands.");
+                                    executeRestartCommands.run();
+                                }
+                            }
+                        }, _delaySeconds * 1000);
+                    } else {
+                        executeRestartCommands.run();
+                    }
                 }
                 scheduledRestarts.remove(nextRestart);
                 canceledRestarts.remove(nextRestart);

@@ -37,3 +37,27 @@ subtitles:
 commands:
   - "restart"
   - "stop"
+
+#
+# Delayed restart
+#
+
+# When enabled, the commands above are NOT executed directly at restart time.
+# Instead, the plugin first runs the 'runFirst' commands (e.g. saving data,
+# moving players to a lobby), then waits 'delay' seconds before finally
+# running the restart commands from the 'commands' section.
+#
+# Original behavior (delayRestart enabled: false):
+#   Time met -> run 'commands'
+# With delayRestart enabled:
+#   Time met -> run 'runFirst' -> wait 'delay' seconds -> run 'commands'
+delayRestart:
+  # Enable or disable the delayed restart
+  enabled: false
+
+  # Seconds to wait between running the 'runFirst' commands and the restart commands
+  delay: 30
+
+  # Commands executed immediately at the restart time, before the delay starts
+  runFirst:
+    - "sudo * lobby"
